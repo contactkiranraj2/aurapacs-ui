@@ -7,8 +7,6 @@ export default function Home() {
   useEffect(() => {
     sessionStorage.clear();
     localStorage.clear();
-    cookieStore.delete("session");
-    cookieStore.delete("csrftoken");
   }, []);
 
   return (
