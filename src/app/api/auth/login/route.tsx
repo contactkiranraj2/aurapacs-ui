@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
-,  try {
+  try {
     const { email, password } = await req.json();
 
     if (!email || !password) {
