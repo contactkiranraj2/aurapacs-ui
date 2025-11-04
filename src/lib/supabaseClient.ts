@@ -8,12 +8,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
 );
 
 export async function POST(req: Request) {
   try {
-    const { userId, accountType, orgName } = await req.json();
+    const { userId, orgName } = await req.json();
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -52,11 +52,12 @@ export async function POST(req: Request) {
       message: "Tenant and membership created",
       tenantId: tenantData.id,
     });
-  } catch (err: any) {
-    console.error(err);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error(error);
     return NextResponse.json(
-      { error: err.message || String(err) },
-      { status: 500 }
+      { error: error.message || String(err) },
+      { status: 500 },
     );
   }
 }

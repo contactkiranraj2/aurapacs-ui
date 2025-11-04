@@ -26,7 +26,7 @@ export const GET = async () => {
         {
           headers: { Accept: "application/dicom+json" },
           responseType: "json",
-        }
+        },
       );
 
     const studies = studiesResponse.data;
@@ -38,7 +38,7 @@ export const GET = async () => {
 
     // Step 2: Fetch complete metadata for each study
     const studyDetails = await Promise.all(
-      studies.map(async (study: any) => {
+      studies.map(async (study: Record<string, any>) => {
         try {
           const studyInstanceUID = study["0020000D"]?.["Value"]?.[0];
 
@@ -57,14 +57,15 @@ export const GET = async () => {
               {
                 headers: { Accept: "application/dicom+json" },
                 responseType: "json",
-              }
+              },
             );
 
-          const metadata = metadataResponse.data;
+          const metadata: Record<string, any>[] =
+            metadataResponse.data as Record<string, any>[];
 
           // The metadata returns an array of instances, we take the first one to get study-level info
           if (Array.isArray(metadata) && metadata.length > 0) {
-            const firstInstance = metadata[0];
+            const firstInstance: Record<string, any> = metadata[0];
 
             // Extract all required DICOM tags from the complete metadata
             return {
@@ -101,15 +102,16 @@ export const GET = async () => {
           console.error(`Error fetching metadata for study:`, error);
           return study; // Return original study data if metadata fetch fails
         }
-      })
+      }),
     );
 
     // Filter out null studies and return the detailed data
     const filteredStudyDetails = studyDetails.filter((study) => study !== null);
 
     return NextResponse.json({ data: filteredStudyDetails });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching studies:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 };

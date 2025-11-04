@@ -55,8 +55,9 @@ export const GET = async (
     const instances = instancesResponse.data;
 
     return NextResponse.json({ series, instances });
-  } catch (err: any) {
-    console.error(`Error fetching study details for ${params.id}:`, err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error(`Error fetching study details for ${params.id}:`, error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 };

@@ -93,7 +93,9 @@ export function StatisticsCards({ data }: StatisticsCardsProps) {
       <div className="bg-white rounded-xl p-4 shadow border border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">Today's Studies</p>
+            <p className="text-sm font-medium text-gray-600">
+              Today&apos;s Studies
+            </p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
               {stats.todayStudies}
             </p>

@@ -30,8 +30,9 @@ export default function LoginPage() {
 
       // Redirect to dashboard or landing page
       router.push("/cases");
-    } catch (err: any) {
-      setError(err.message || String(err));
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || String(err));
     } finally {
       setLoading(false);
     }

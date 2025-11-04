@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 // Use anon/public key for normal login
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
 export async function POST(req: Request) {
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       console.error("Login failed:", authError);
       return NextResponse.json(
         { error: authError?.message || "Login failed" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         `
         role,
         tenants(id, name)
-      `
+      `,
       )
       .eq("user_id", userId)
       .single(); // assuming 1 tenant per user
@@ -68,11 +68,9 @@ export async function POST(req: Request) {
       tenant: tenantMembership?.tenants || null,
       role: tenantMembership?.role || null,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Unexpected login error:", err);
-    return NextResponse.json(
-      { error: err.message || String(err) },
-      { status: 500 }
-    );
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

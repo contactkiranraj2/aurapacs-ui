@@ -3,9 +3,12 @@ import { google } from "googleapis";
 import archiver from "archiver";
 import { PassThrough } from "stream";
 
-export async function GET(req: Request, context: { params: { id: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } },
+) {
   try {
-    const studyUID = context.params.id;
+    const studyUID = params.id;
     if (!studyUID) {
       return NextResponse.json({ error: "Missing Study UID" }, { status: 400 });
     }
@@ -35,7 +38,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
             Accept:
               'application/dicom+json, multipart/related; type="application/dicom"; transfer-syntax=*',
           },
-        }
+        },
       );
 
     const seriesList = Array.isArray(seriesRes.data)
@@ -67,7 +70,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
               Accept:
                 'application/dicom+json, multipart/related; type="application/dicom"; transfer-syntax=*',
             },
-          }
+          },
         );
 
       const instances = Array.isArray(instancesRes.data)
@@ -91,7 +94,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
                 Accept:
                   'multipart/related; type="application/dicom"; transfer-syntax=*',
               },
-            }
+            },
           );
 
         const buffer = Buffer.from(dicomRes.data as ArrayBuffer);
@@ -118,11 +121,15 @@ export async function GET(req: Request, context: { params: { id: string } }) {
         "Content-Disposition": `attachment; filename="${studyUID}.zip"`,
       },
     });
-  } catch (err: any) {
-    console.error("Download error:", err?.response?.data || err);
+  } catch (err: unknown) {
+    const error = err as {
+      response?: { data?: Record<string, unknown> };
+      message?: string;
+    };
+    console.error("Download error:", error?.response?.data || err);
     return NextResponse.json(
-      { error: err?.message || "Failed to download study" },
-      { status: 500 }
+      { error: error?.message || "Failed to download study" },
+      { status: 500 },
     );
   }
 }

@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 // Server-side Supabase client (service role key)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(req: Request) {
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       console.warn("⚠️ Invalid accountType:", accountType);
       return NextResponse.json(
         { error: "Invalid accountType" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         console.warn("⚠️ Missing email or password for individual");
         return NextResponse.json(
           { error: "Email and password required" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         console.error("❌ Supabase Auth returned no user data");
         return NextResponse.json(
           { error: "Failed to create user" },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
         console.error("❌ Tenant member creation error:", memberError);
         return NextResponse.json(
           { error: memberError.message },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
@@ -108,11 +108,9 @@ export async function POST(req: Request) {
       tenantId: tenantData.id,
       userId: userId || null,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("🔥 Unexpected error:", err);
-    return NextResponse.json(
-      { error: err.message || String(err) },
-      { status: 500 }
-    );
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

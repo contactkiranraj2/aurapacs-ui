@@ -1,16 +1,24 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import cornerstone from "cornerstone-core";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
+import cornerstoneTools from "cornerstone-tools";
+import Hammer from "hammerjs";
+import cornerstoneMath from "cornerstone-math";
+import { ZoomIn, Move, Sun, RefreshCw } from "lucide-react";
+
+// Initialize Cornerstone Tools
+cornerstoneTools.external.cornerstone = cornerstone;
+cornerstoneTools.external.Hammer = Hammer;
+cornerstoneTools.external.cornerstoneMath = cornerstoneMath;
+cornerstoneTools.init();
 
 cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
 cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
 
-// It's important to configure the web worker manager before using it.
-// The paths might need adjustment based on your project's public folder structure.
 try {
   cornerstoneWADOImageLoader.webWorkerManager.initialize({
     webWorkerPath: "/cornerstoneWADOImageLoaderWebWorker.js",
@@ -24,52 +32,99 @@ try {
   console.error("Failed to initialize cornerstone web worker manager:", error);
 }
 
+const extractPatientName = (
+  patientNameObj: Record<string, unknown>,
+): string => {
+  if (!patientNameObj) return "Unknown";
+
+  if (typeof patientNameObj === "string") {
+    return patientNameObj;
+  }
+
+  if (typeof patientNameObj === "object") {
+    if (patientNameObj.Alphabetic) {
+      return patientNameObj.Alphabetic;
+    }
+    if (patientNameObj.Ideographic) {
+      return patientNameObj.Ideographic;
+    }
+    if (patientNameObj.Phonetic) {
+      return patientNameObj.Phonetic;
+    }
+    return JSON.stringify(patientNameObj);
+  }
+
+  return String(patientNameObj);
+};
+
 const DicomViewer = () => {
   const { id: studyInstanceUID } = useParams();
   const elementRef = useRef(null);
+  const [activeTool, setActiveTool] = useState("");
+  const [patientInfo, setPatientInfo] = useState<Record<string, any> | null>(
+    null,
+  );
+
+  const setTool = useCallback(
+    (toolName: string) => {
+      if (activeTool) {
+        cornerstoneTools.setToolDisabled(activeTool);
+      }
+      cornerstoneTools.setToolActive(toolName, { mouseButtonMask: 1 });
+      setActiveTool(toolName);
+    },
+    [activeTool],
+  );
 
   useEffect(() => {
+    const element = elementRef.current;
+    if (!element) return;
+
+    cornerstone.enable(element);
+
     const fetchAndLoadImage = async () => {
-      if (studyInstanceUID && elementRef.current) {
-        const element = elementRef.current;
-        cornerstone.enable(element);
-
+      if (studyInstanceUID) {
         try {
-          const res = await fetch(`/api/studies/${studyInstanceUID}`);
-          if (!res.ok) {
-            throw new Error(`Failed to fetch study details: ${res.status}`);
-          }
-          const studyData = await res.json();
+          const metaRes = await fetch(
+            `/api/studies/${studyInstanceUID}/metadata`,
+          );
+          const metaJson = await metaRes.json();
+          setPatientInfo(metaJson.data);
 
-          const seriesList = studyData.series;
-          const firstSeries = seriesList?.[0];
+          const seriesRes = await fetch(`/api/studies/${studyInstanceUID}`);
+          const seriesJson = await seriesRes.json();
+          const firstSeries = seriesJson.series?.[0];
 
           if (firstSeries) {
             const seriesInstanceUID = firstSeries["0020000E"]?.Value[0];
-
             const instancesRes = await fetch(
               `/api/studies/${studyInstanceUID}/series/${seriesInstanceUID}/instances`,
             );
-            if (!instancesRes.ok) {
-              throw new Error(
-                `Failed to fetch instances: ${instancesRes.status}`,
-              );
-            }
-            const instancesData = await instancesRes.json();
-            const firstInstance = instancesData.instances?.[0];
+            const instancesJson = await instancesRes.json();
+            const firstInstance = instancesJson.instances?.[0];
 
             if (firstInstance) {
               const sopInstanceUID = firstInstance["00080018"]?.Value[0];
               const imageId = `wadouri:/api/studies/${studyInstanceUID}/series/${seriesInstanceUID}/instances/${sopInstanceUID}`;
 
-              cornerstone
-                .loadImage(imageId)
-                .then((image) => {
-                  cornerstone.displayImage(element, image);
-                })
-                .catch((err) => {
-                  console.error("Cornerstone loadImage error:", err);
+              cornerstone.loadImage(imageId).then((image) => {
+                cornerstone.displayImage(element, image);
+                cornerstoneTools.addStackStateManager(element, ["stack"]);
+                cornerstoneTools.addToolState(element, "stack", {
+                  imageIds: [imageId],
+                  currentImageIdIndex: 0,
                 });
+
+                // Set up tools
+                cornerstoneTools.addTool(cornerstoneTools.ZoomTool, {
+                  configuration: { invert: true },
+                });
+                cornerstoneTools.addTool(cornerstoneTools.PanTool);
+                cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
+
+                // Activate a default tool
+                setTool("Zoom");
+              });
             }
           }
         } catch (error) {
@@ -81,24 +136,73 @@ const DicomViewer = () => {
     fetchAndLoadImage();
 
     return () => {
-      if (elementRef.current) {
-        try {
-          cornerstone.disable(elementRef.current);
-        } catch (error) {
-          // It might throw an error if the element is already disabled, which is fine.
-        }
+      if (element) {
+        cornerstone.disable(element);
       }
     };
-  }, [studyInstanceUID]);
+  }, [studyInstanceUID, setTool]);
+
+  const resetViewport = () => {
+    cornerstone.reset(elementRef.current!);
+  };
+
+  const getDicomValue = (tag: string) => patientInfo?.[tag]?.Value?.[0];
 
   return (
-    <div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-white">
-      <h1 className="text-2xl mb-4">DICOM Viewer</h1>
-      <p className="mb-4">Study Instance UID: {studyInstanceUID as string}</p>
-      <div
-        ref={elementRef}
-        className="w-[512px] h-[512px] border border-gray-500"
-      ></div>
+    <div className="h-screen w-screen bg-gray-900 flex flex-col text-white">
+      <header className="bg-gray-800 p-4 shadow-md z-10">
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-bold">DICOM Viewer</h1>
+          {patientInfo && (
+            <div className="text-sm text-right">
+              <p>
+                <strong>Patient:</strong>{" "}
+                {extractPatientName(getDicomValue("00100010"))}
+              </p>
+              <p>
+                <strong>Study:</strong> {getDicomValue("00081030") || "N/A"}
+              </p>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        <nav className="bg-gray-800 w-20 flex flex-col items-center py-4">
+          <button
+            onClick={() => setTool("Zoom")}
+            className={`p-3 rounded ${activeTool === "Zoom" ? "bg-blue-600" : "hover:bg-gray-700"}`}
+            title="Zoom"
+          >
+            <ZoomIn />
+          </button>
+          <button
+            onClick={() => setTool("Pan")}
+            className={`p-3 mt-2 rounded ${activeTool === "Pan" ? "bg-blue-600" : "hover:bg-gray-700"}`}
+            title="Pan"
+          >
+            <Move />
+          </button>
+          <button
+            onClick={() => setTool("Wwwc")}
+            className={`p-3 mt-2 rounded ${activeTool === "Wwwc" ? "bg-blue-600" : "hover:bg-gray-700"}`}
+            title="Window/Level"
+          >
+            <Sun />
+          </button>
+          <button
+            onClick={resetViewport}
+            className="p-3 mt-2 rounded hover:bg-gray-700"
+            title="Reset"
+          >
+            <RefreshCw />
+          </button>
+        </nav>
+
+        <main className="flex-1 bg-black flex items-center justify-center p-4">
+          <div ref={elementRef} className="w-full h-full"></div>
+        </main>
+      </div>
     </div>
   );
 };

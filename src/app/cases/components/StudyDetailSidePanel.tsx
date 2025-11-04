@@ -161,7 +161,11 @@ export function StudyDetailSidePanel({
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() =>
+                  setActiveTab(
+                    tab.id as "patient" | "study" | "technical" | "timeline",
+                  )
+                }
                 className={`px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                   activeTab === tab.id
                     ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"

@@ -33,16 +33,17 @@ export async function POST(req: Request) {
       await healthcare.projects.locations.datasets.dicomStores.storeInstances({
         parent,
         dicomWebPath: "studies",
-        requestBody: buffer as any,
+        requestBody: buffer,
         headers: {
           "Content-Type": "application/dicom",
           Accept: "application/dicom+json",
         },
-      } as any);
+      });
 
     return NextResponse.json({ message: "Uploaded", data: response.data });
-  } catch (err: any) {
-    console.error("Upload error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("Upload error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 
 export default function RegisterPage() {
   const [accountType, setAccountType] = useState<"individual" | "institution">(
-    "individual"
+    "individual",
   );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,8 +35,9 @@ export default function RegisterPage() {
       setEmail("");
       setPassword("");
       setOrgName("");
-    } catch (err: any) {
-      setError(err.message || String(err));
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || String(err));
     } finally {
       setLoading(false);
     }

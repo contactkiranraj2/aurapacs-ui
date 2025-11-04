@@ -44,7 +44,9 @@ export type StudyRow = {
 
 /* ------------------------------------------------------------ */
 /* Helper function to extract patient name */
-const extractPatientName = (patientNameObj: any): string => {
+const extractPatientName = (
+  patientNameObj: Record<string, unknown>,
+): string => {
   if (!patientNameObj) return "Unknown";
 
   if (typeof patientNameObj === "string") {
@@ -156,7 +158,9 @@ function StatisticsCards({ data }: { data: StudyRow[] }) {
       <div className="bg-white rounded-xl p-4 shadow border border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">Today's Studies</p>
+            <p className="text-sm font-medium text-gray-600">
+              Today&apos;s Studies
+            </p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
               {stats.todayStudies}
             </p>
@@ -358,7 +362,11 @@ function StudyDetailSidePanel({
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() =>
+                  setActiveTab(
+                    tab.id as "patient" | "study" | "technical" | "timeline",
+                  )
+                }
                 className={`px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                   activeTab === tab.id
                     ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
@@ -720,8 +728,9 @@ export default function StudiesPage() {
 
       const raw: RawDicom[] = Array.isArray(json?.data) ? json.data : [];
 
-      const parsed: StudyRow[] = raw.map((s, i) => {
-        const patientNameObj = s["00100010"]?.Value?.[0];
+      const parsed: StudyRow[] = raw.map((s: Record<string, any>, i) => {
+        const patientNameObj: Record<string, unknown> =
+          s["00100010"]?.Value?.[0];
         const patientName = extractPatientName(patientNameObj);
 
         const studyInstanceUID =
@@ -1272,8 +1281,8 @@ export default function StudiesPage() {
         {/* Footer hint */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-400">
-            💡 Click on any study's "Details" button to view comprehensive
-            information in the side panel
+            💡 Click on any study&apos;s &quot;Details&quot; button to view
+            comprehensive information in the side panel
           </p>
         </div>
       </div>

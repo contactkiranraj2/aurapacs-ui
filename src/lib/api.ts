@@ -2,8 +2,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 interface LoginResponse {
   message: string;
-  user: any; // Define a more specific type for user
-  tenant: any; // Define a more specific type for tenant
+  user: Record<string, unknown>; // Define a more specific type for user
+  tenant: Record<string, unknown>; // Define a more specific type for tenant
   role: string | null;
 }
 
@@ -11,10 +11,6 @@ interface RegisterResponse {
   message: string;
   tenantId: string;
   userId: string | null;
-}
-
-interface ApiError {
-  error: string;
 }
 
 export const loginUser = async (
