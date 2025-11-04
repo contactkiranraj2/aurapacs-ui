@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ColumnDef,
@@ -71,15 +72,18 @@ const extractPatientName = (patientNameObj: any): string => {
 function StatisticsCards({ data }: { data: StudyRow[] }) {
   const stats = useMemo(() => {
     const totalStudies = data.length;
-    const modalities = data.reduce((acc, study) => {
-      const modality = study.modality || "Unknown";
-      acc[modality] = (acc[modality] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const modalities = data.reduce(
+      (acc, study) => {
+        const modality = study.modality || "Unknown";
+        acc[modality] = (acc[modality] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     const today = new Date().toISOString().split("T")[0].replace(/-/g, "");
     const todayStudies = data.filter(
-      (study) => study.studyDate === today
+      (study) => study.studyDate === today,
     ).length;
 
     const uniquePatients = new Set(data.map((study) => study.patientId)).size;
@@ -270,7 +274,7 @@ function StudyDetailSidePanel({
     "patient" | "study" | "technical" | "timeline"
   >("patient");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(["basic", "clinical", "identification"])
+    new Set(["basic", "clinical", "identification"]),
   );
 
   const toggleSection = (section: string) => {
@@ -288,7 +292,7 @@ function StudyDetailSidePanel({
   return (
     <div
       className={`
-      fixed top-0 right-0 h-full w-96 bg-white shadow-xl border-l border-gray-200 
+      fixed top-0 right-0 h-full w-96 bg-white shadow-xl border-l border-gray-200
       transform transition-transform duration-300 ease-in-out z-40
       ${isOpen ? "translate-x-0" : "translate-x-full"}
       lg:relative lg:translate-x-0 lg:z-auto lg:flex lg:flex-col
@@ -537,9 +541,11 @@ function StudyDetailSidePanel({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-3">
           <div className="flex gap-2">
-            <button className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
-              Open Viewer
-            </button>
+            <Link href={`/viewer/${study.studyInstanceUID}`} className="flex-1">
+              <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
+                Open Viewer
+              </button>
+            </Link>
             <button className="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors text-sm">
               Download
             </button>
@@ -907,7 +913,7 @@ export default function StudiesPage() {
         ),
       },
     ],
-    []
+    [],
   );
 
   /* ------------------------------------------------------------ */
@@ -1088,7 +1094,7 @@ export default function StudiesPage() {
                             >
                               {flexRender(
                                 header.column.columnDef.header,
-                                header.getContext()
+                                header.getContext(),
                               )}
                               {{
                                 asc: (
@@ -1167,7 +1173,7 @@ export default function StudiesPage() {
                           >
                             {flexRender(
                               cell.column.columnDef.cell,
-                              cell.getContext()
+                              cell.getContext(),
                             )}
                           </td>
                         ))}
