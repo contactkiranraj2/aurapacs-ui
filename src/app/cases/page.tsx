@@ -220,10 +220,11 @@ export default function StudiesPage() {
                 {uploading ? "Uploading..." : "Upload Study"}
                 <input
                   type="file"
-                  accept=".dcm"
-                  onChange={onUpload}
+                  onChange={(e) => handleUpload(e.target.files)}
                   className="hidden"
                   disabled={uploading}
+                  multiple
+                  webkitdirectory=""
                 />
               </label>
             </div>

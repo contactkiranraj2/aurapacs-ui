@@ -18,9 +18,10 @@ export async function GET(
     const cloudRegion = "asia-south1";
     const datasetId = "Aurapacs-dataset";
     const dicomStoreId = "aurapacs-data-store";
-    const parent = `projects/${projectId}/locations/${cloudRegion}/datasets/${datasetId}/dicomStores/${dicomStoreId}`;
+    const parent = `projects/${process.env.GCP_PROJECT_ID}/locations/${process.env.GCP_LOCATION}/datasets/${process.env.GCP_DATASET_ID}/dicomStores/${process.env.GCP_DICOM_STORE_ID}`;
 
     const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GCP_KEYFILE_JSON!),
       scopes: ["https://www.googleapis.com/auth/cloud-platform"],
     });
 

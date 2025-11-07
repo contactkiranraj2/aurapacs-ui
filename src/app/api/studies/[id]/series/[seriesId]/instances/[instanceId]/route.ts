@@ -22,7 +22,7 @@ export const GET = async (
     });
 
     const healthcare = google.healthcare({ version: "v1", auth });
-    const parent = `projects/ferrous-osprey-473710-t6/locations/asia-south1/datasets/Aurapacs-dataset/dicomStores/aurapacs-data-store`;
+    const parent = `projects/${process.env.GCP_PROJECT_ID}/locations/${process.env.GCP_LOCATION}/datasets/${process.env.GCP_DATASET_ID}/dicomStores/${process.env.GCP_DICOM_STORE_ID}`;
 
     const instanceResponse =
       await healthcare.projects.locations.datasets.dicomStores.studies.series.instances.retrieveInstance(

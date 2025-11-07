@@ -97,7 +97,9 @@ export function useStudies(): UseStudiesResult {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/studies`);
+        const res = await fetch(`${API_BASE_URL}/api/studies`, {
+          cache: "no-store",
+        });
         if (!res.ok) {
           const errData = await res.json();
           throw new Error(
@@ -126,33 +128,41 @@ export function useStudies(): UseStudiesResult {
     [parseRawDicomToStudyRow],
   );
 
-  const handleUpload = useCallback(
-    async (file: File) => {
-      setUploading(true);
-      setError(null);
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await fetch(`${API_BASE_URL}/api/upload`, {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || "Upload failed.");
-        }
-        await fetchStudies(true); // Force re-fetch after upload
-      } catch (err: unknown) {
-        const error = err as Error;
-        console.error("Error uploading study:", error);
-        setError(error.message || "Failed to upload study. Please try again.");
-      } finally {
-        setUploading(false);
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append("file", files[i]);
       }
-    },
-    [fetchStudies],
-  );
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || "Upload failed");
+      }
+
+      // Explicitly check for the success message before reloading
+      if (result.message) {
+        console.log("Upload successful. Refetching studies...");
+        await fetchStudies(true); // Force refetch
+      } else {
+        throw new Error(
+          "Upload succeeded but the server response was unexpected.",
+        );
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     fetchStudies();
