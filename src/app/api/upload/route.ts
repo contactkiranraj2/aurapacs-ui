@@ -22,16 +22,16 @@ export async function POST(req: Request) {
             cookieStore.set({ name, value: "", ...options });
           },
         },
-      },
+      }
     );
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // const {
+    //   data: { user },
+    // } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // if (!user) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
 
     const formData = await req.formData();
     const files = formData.getAll("file") as File[];
@@ -63,7 +63,10 @@ export async function POST(req: Request) {
       const patientSex = dataSet.string("x00100040");
 
       const formattedDate = studyDate
-        ? `${studyDate.slice(0, 4)}-${studyDate.slice(4, 6)}-${studyDate.slice(6, 8)}`
+        ? `${studyDate.slice(0, 4)}-${studyDate.slice(4, 6)}-${studyDate.slice(
+            6,
+            8
+          )}`
         : new Date().toISOString().split("T")[0];
 
       // Step 1: Upsert study metadata in Supabase FIRST
@@ -86,12 +89,12 @@ export async function POST(req: Request) {
 
       const { error: rpcError } = await supabase.rpc(
         "upsert_study_and_increment_instance",
-        rpcPayload,
+        rpcPayload
       );
       if (rpcError) {
         console.error(
           `Supabase RPC error for file: ${file.name}`,
-          JSON.stringify(rpcError, null, 2),
+          JSON.stringify(rpcError, null, 2)
         );
         throw new Error(`Failed to save metadata for ${file.name}`);
       }
@@ -107,14 +110,14 @@ export async function POST(req: Request) {
               "Content-Type": "application/dicom",
               Accept: "application/dicom+json",
             },
-          },
+          }
         );
       } catch (err: any) {
         // If upload fails (and it's not a simple conflict), roll back the database change.
         if (err.code !== 409) {
           console.error(
             `Google Cloud upload failed for ${file.name}. Rolling back database change.`,
-            err,
+            err
           );
           await supabase.rpc("delete_study_if_upload_fails", {
             p_study_instance_uid: studyInstanceUID,

@@ -20,12 +20,14 @@ export const GET = async () => {
             cookieStore.set({ name, value: "", ...options });
           },
         },
-      },
+      }
     );
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
+    console.log(user);
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,7 +43,7 @@ export const GET = async () => {
       console.error("Supabase error:", dbError);
       return NextResponse.json(
         { error: "Could not fetch user studies" },
-        { status: 500 },
+        { status: 500 }
       );
     }
 

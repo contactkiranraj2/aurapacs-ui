@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Use anon/public key for normal login
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export async function POST(req: Request) {
@@ -13,12 +12,12 @@ export async function POST(req: Request) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: "Email and password required" },
-        { status: 400 },
+        { error: "Email and password are required" },
+        { status: 400 }
       );
     }
 
-    // 1️⃣ Sign in the user
+    // 1️⃣ Sign in user
     const { data: authData, error: authError } =
       await supabase.auth.signInWithPassword({
         email,
@@ -29,44 +28,30 @@ export async function POST(req: Request) {
       console.error("Login failed:", authError);
       return NextResponse.json(
         { error: authError?.message || "Login failed" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
-    const userId = authData.user.id;
+    const user = authData.user;
 
-    // 2️⃣ Fetch user info from 'users' table
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    // 2️⃣ Optionally get user metadata
+    const userInfo = {
+      id: user.id,
+      email: user.email,
+      role: user.role, // usually "authenticated"
+      created_at: user.created_at,
+      last_sign_in_at: user.last_sign_in_at,
+      app_metadata: user.app_metadata,
+      user_metadata: user.user_metadata, // your custom fields if added
+    };
 
-    if (userError) {
-      console.error("Failed to fetch user info:", userError);
-    }
+    console.log("Login successful:", userInfo);
 
-    // 3️⃣ Fetch tenant info from 'tenant_members' table
-    const { data: tenantMembership, error: tenantError } = await supabase
-      .from("tenant_members")
-      .select(
-        `
-        role,
-        tenants(id, name)
-      `,
-      )
-      .eq("user_id", userId)
-      .single(); // assuming 1 tenant per user
-
-    if (tenantError) {
-      console.error("Failed to fetch tenant info:", tenantError);
-    }
-    console.log("Login successful", userData, tenantMembership);
+    // 3️⃣ Return the info
     return NextResponse.json({
       message: "Login successful",
-      user: userData || null,
-      tenant: tenantMembership?.tenants || null,
-      role: tenantMembership?.role || null,
+      user: userInfo,
+      session: authData.session, // optional: include session tokens
     });
   } catch (err: unknown) {
     console.error("Unexpected login error:", err);
