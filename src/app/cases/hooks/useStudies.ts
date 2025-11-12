@@ -99,6 +99,7 @@ export function useStudies(): UseStudiesResult {
       try {
         const res = await fetch(`${API_BASE_URL}/api/studies`, {
           cache: "no-store",
+          credentials: "include",
         });
         if (!res.ok) {
           const errData = await res.json();
