@@ -27,8 +27,20 @@ export const AppHeader = () => {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      // Call your logout API route
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+
+      if (!res.ok) {
+        console.error("Logout failed:", await res.text());
+        return;
+      }
+
+      console.log("✅ Logout successful");
+      router.push("/login");
+    } catch (error) {
+      console.error("💥 Logout error:", error);
+    }
   };
 
   return (

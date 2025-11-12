@@ -33,9 +33,11 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
+      router.refresh();
       router.push("/cases");
     } catch (err: unknown) {
       const error = err as Error;
