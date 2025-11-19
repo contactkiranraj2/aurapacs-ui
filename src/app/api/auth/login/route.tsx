@@ -85,6 +85,9 @@ export async function POST(req: Request) {
     };
 
     // ✅ Return JSON while keeping cookies intact
+    const headers = new Headers(response.headers);
+    headers.set("Cache-Control", "no-store");
+    
     return NextResponse.json(
       {
         message: "Login successful",
@@ -92,7 +95,7 @@ export async function POST(req: Request) {
         session: authData.session,
       },
       {
-        headers: response.headers, // includes Supabase cookies
+        headers, // includes Supabase cookies + Cache-Control
       }
     );
   } catch (err: unknown) {

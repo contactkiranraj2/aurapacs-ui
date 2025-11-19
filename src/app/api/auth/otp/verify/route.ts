@@ -1,118 +1,124 @@
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 
-const supabase = createClient(
+const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(req: Request) {
-  try {
-    const { mobile, otp } = await req.json();
+  const { mobile, otp } = await req.json();
 
-    if (!mobile || !otp) {
-      return NextResponse.json(
-        { error: "Mobile number and OTP are required" },
-        { status: 400 },
-      );
+  const cookieStore = await cookies();
+  const response = NextResponse.json({ ok: true });
+
+  // SSR supabase client for cookie handling
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookies) => {
+          cookies.forEach(({ name, value, options }) =>
+            response.cookies.set({ name, value, ...options })
+          );
+        },
+      },
     }
+  );
 
-    const { data: otpData, error: otpError } = await supabase
-      .from("otp_codes")
-      .select("*")
-      .eq("mobile", mobile)
-      .single();
+  // 1. Validate OTP
+  const { data: otpData } = await admin
+    .from("otp_codes")
+    .select("*")
+    .eq("mobile", mobile)
+    .single();
 
-    if (otpError || !otpData) {
-      return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
-    }
+  if (!otpData || otpData.otp !== otp)
+    return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
 
-    if (new Date(otpData.expires_at) < new Date()) {
-      return NextResponse.json({ error: "OTP has expired" }, { status: 400 });
-    }
+  if (new Date(otpData.expires_at).getTime() < Date.now())
+    return NextResponse.json({ error: "OTP expired" }, { status: 400 });
 
-    if (otpData.otp !== otp) {
-      return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
-    }
+  await admin.from("otp_codes").delete().eq("mobile", mobile);
 
-    const { error: deleteError } = await supabase
-      .from("otp_codes")
-      .delete()
-      .eq("mobile", mobile);
+  // 2. Shadow user email
+  const email = `${mobile}@aurapacs.com`;
 
-    if (deleteError) {
-      console.error("Failed to delete OTP:", deleteError);
-    }
+  // 3. Ensure user exists
+  const { data: allUsers } = await admin.auth.admin.listUsers();
+  let user = allUsers.users.find((u) => u.email === email);
 
-    let { data: user, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("phone", mobile)
-      .single();
-
-    if (userError && userError.code !== "PGRST116") {
-      console.error("Error fetching user:", userError);
-      return NextResponse.json(
-        { error: "Failed to verify OTP" },
-        { status: 500 },
-      );
-    }
-
-    if (!user) {
-      const { data: newUser, error: newUserError } = await supabase.auth.admin.createUser({
-        phone: mobile,
-        phone_confirm: true,
-      });
-
-      if (newUserError || !newUser) {
-        console.error("Error creating user:", newUserError);
-        return NextResponse.json(
-          { error: "Failed to create user" },
-          { status: 500 },
-        );
-      }
-
-      user = newUser.user
-    }
-
-    const { data: session, error: sessionError } = await supabase.auth.signInWithPassword({
-        phone: mobile,
-        password: 'password'
-    })
-
-    if(sessionError || !session){
-        const { data: magicLink, error: magicLinkError } = await supabase.auth.signInWithOtp({
-            phone: mobile,
-        });
-
-        if (magicLinkError) {
-            console.error("Error sending magic link:", magicLinkError);
-            return NextResponse.json(
-              { error: "Failed to log in" },
-              { status: 500 },
-            );
-        }
-    }
-
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError) {
-      console.error("Failed to fetch profile:", profileError);
-    }
-
-    return NextResponse.json({
-      message: "Login successful",
-      user,
-      role: profile?.role || null,
+  if (!user) {
+    const { data: created } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: false,
     });
-  } catch (err: unknown) {
-    console.error("Unexpected error:", err);
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    
+    if (!created?.user) {
+      return NextResponse.json(
+        { error: "Failed to create user" },
+        { status: 500 }
+      );
+    }
+    
+    user = created.user;
+
+    await admin.from("profiles").insert({
+      id: user.id,
+      mobile,
+      role: "patient",
+    });
   }
+
+  // 4. Create a temporary password for this user (if not exists)
+  // This allows us to use signInWithPassword which properly sets SSR cookies
+  const tempPassword = `temp_${mobile}_${Date.now()}`;
+  
+  // Update user with password using admin client
+  const { error: updateError } = await admin.auth.admin.updateUserById(
+    user.id,
+    { password: tempPassword }
+  );
+
+  if (updateError) {
+    return NextResponse.json(
+      { error: "Failed to update user credentials" },
+      { status: 500 }
+    );
+  }
+
+  // 5. Sign in using SSR client with the temporary password
+  // This properly establishes the session and sets cookies
+  const { data: authData, error: authError } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password: tempPassword,
+    });
+
+  if (authError || !authData.session) {
+    return NextResponse.json(
+      { error: "Failed to establish session" },
+      { status: 500 }
+    );
+  }
+
+  // Return tokens and user data in response body for client-side setSession
+  const finalResponse = NextResponse.json(
+    {
+      access_token: authData.session.access_token,
+      refresh_token: authData.session.refresh_token,
+      user: authData.user,
+    },
+    {
+      headers: response.headers, // Include the cookies set by Supabase SSR
+    }
+  );
+
+  finalResponse.headers.set("Cache-Control", "no-store");
+
+  return finalResponse;
 }

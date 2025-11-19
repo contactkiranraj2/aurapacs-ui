@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
-
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 type LoginMethod = "email" | "mobile";
 
 export default function LoginPage() {
@@ -37,8 +41,8 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      router.refresh();
-      router.push("/cases");
+      // Hard reload to ensure fresh authenticated content
+      window.location.href = "/cases";
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || String(err));
@@ -68,19 +72,38 @@ export default function LoginPage() {
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch("/api/auth/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mobile, otp }),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Login failed");
-      router.push("/cases");
+
+      if (!res.ok) {
+        setError(data.error);
+        return;
+      }
+
+      // Use setSession with tokens from server response
+      const { error } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      // Hard reload to ensure fresh authenticated content
+      window.location.href = "/cases";
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || String(err));

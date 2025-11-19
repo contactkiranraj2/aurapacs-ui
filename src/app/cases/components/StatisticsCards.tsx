@@ -17,8 +17,8 @@ const StatCard = ({
   <div className="bg-white/5 border border-white/10 rounded-2xl p-5 shadow-lg hover:bg-white/10 transition-all duration-300">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-sm font-medium text-cyan-200">{title}</p>
-        <p className="text-2xl font-bold text-white mt-1">{value}</p>
+        <p className="text-sm font-medium text-black-200">{title}</p>
+        <p className="text-2xl font-bold text-teal-800 mt-1">{value}</p>
       </div>
       <div className={`p-3 bg-${color}-500/10 rounded-lg`}>{icon}</div>
     </div>
@@ -28,14 +28,11 @@ const StatCard = ({
 export function StatisticsCards({ data }: { data: StudyRow[] }) {
   const stats = useMemo(() => {
     const totalStudies = data.length;
-    const modalities = data.reduce(
-      (acc, study) => {
-        const modality = study.modality || "Unknown";
-        acc[modality] = (acc[modality] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    const modalities = data.reduce((acc, study) => {
+      const modality = study.modality || "Unknown";
+      acc[modality] = (acc[modality] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -61,10 +58,10 @@ export function StatisticsCards({ data }: { data: StudyRow[] }) {
       <StatCard
         title="Total Studies"
         value={stats.totalStudies}
-        color="blue"
+        color="black"
         icon={
           <svg
-            className="w-6 h-6 text-blue-400"
+            className="w-6 h-6 text-teal-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

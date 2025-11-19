@@ -44,13 +44,14 @@ export const AppHeader = () => {
   };
 
   return (
-    <header className="relative z-10">
-      <nav className="flex items-center justify-between p-6 lg:px-8">
+    <header className="relative z-10 bg-gradient-to-r from-teal-700 to-cyan-700">
+      <nav className="flex items-center justify-between px-4 py-3">
+        {/* LEFT: Logo */}
         <div className="flex items-center">
           <Link href="/cases" className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center mr-3 shadow-lg">
+            <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center mr-2 shadow-md">
               <svg
-                className="w-6 h-6 text-white"
+                className="w-5 h-5 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -63,23 +64,26 @@ export const AppHeader = () => {
                 />
               </svg>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-transparent">
+            <span className="text-lg font-semibold bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-transparent">
               Aurapacs
             </span>
           </Link>
         </div>
-        <div className="flex items-center space-x-4">
+
+        {/* RIGHT: User + Logout */}
+        <div className="flex items-center space-x-3">
           {user && (
-            <div className="text-right">
-              <p className="text-white font-semibold">
+            <div className="text-right leading-tight">
+              <p className="text-white text-sm font-semibold">
                 {user.email || user.phone}
               </p>
-              <p className="text-cyan-200 text-sm">{profile?.role}</p>
+              <p className="text-cyan-200 text-xs">{profile?.role}</p>
             </div>
           )}
+
           <button
             onClick={handleLogout}
-            className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-xl font-medium hover:from-red-600 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-red-500/25 text-sm sm:text-base"
+            className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:from-red-600 hover:to-pink-700 transition-all duration-200 shadow-md"
           >
             Logout
           </button>
