@@ -57,16 +57,25 @@ export async function POST(req: Request) {
       email,
       email_confirm: false,
     });
-    
+
     if (!created?.user) {
       return NextResponse.json(
         { error: "Failed to create user" },
         { status: 500 }
       );
     }
-    
-    user = created.user;
 
+    user = created.user;
+  }
+
+  // 4. Ensure profile exists (for both new and existing users)
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .single();
+
+  if (!existingProfile) {
     await admin.from("profiles").insert({
       id: user.id,
       mobile,
@@ -74,7 +83,7 @@ export async function POST(req: Request) {
     });
   }
 
-  // 4. Create a temporary password for this user (if not exists)
+  // 5. Create a temporary password for this user (if not exists)
   // This allows us to use signInWithPassword which properly sets SSR cookies
   const tempPassword = `temp_${mobile}_${Date.now()}`;
   
@@ -91,7 +100,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // 5. Sign in using SSR client with the temporary password
+  // 6. Sign in using SSR client with the temporary password
   // This properly establishes the session and sets cookies
   const { data: authData, error: authError } =
     await supabase.auth.signInWithPassword({

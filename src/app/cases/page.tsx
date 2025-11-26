@@ -159,7 +159,12 @@ export default function StudiesPage() {
         header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
-            <Link href={`/viewer/${row.original.studyInstanceUID}`}>
+            <Link
+              href={`https://aurapacs-ohif.vercel.app/viewer?StudyInstanceUIDs=${encodeURIComponent(
+                row.original.studyInstanceUID
+              )}`}
+              target="_blank"
+            >
               <button className="px-3 py-1.5 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">
                 View
               </button>
